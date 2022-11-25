@@ -8,6 +8,7 @@ import com.example.realworld.model.profile.dto.ProfileDTOResponse;
 import com.example.realworld.model.user.dto.UserDTOCreate;
 import com.example.realworld.model.user.dto.UserDTOLoginRequest;
 import com.example.realworld.model.user.dto.UserDTOResponse;
+import com.example.realworld.model.user.dto.UserDTOUpdate;
 import com.example.realworld.model.user.mapper.UserMapper;
 import com.example.realworld.repository.UserRepository;
 import com.example.realworld.service.UserService;
@@ -72,49 +73,29 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public Map<String, ProfileDTOResponse> getProfile(String username) throws CustomNotFoundException {
-        User userLoggedIn = getUserLoggedIn();
-
         Optional<User> userOptional = userRepository.findByUsername(username);
         if(userOptional.isEmpty()){
             throw new CustomNotFoundException(CustomError.builder().code("404").message("User not found").build());
         }
-        User user = userOptional.get();
-        Set<User> followers = user.getFollowers();
-        boolean isFollowing = false;
-        for(User u: followers){
-            if(u.getId() == userLoggedIn.getId()){
-                isFollowing = true;
-                break;
-            }
-        }
-
+        boolean isFollowing = checkFollowing(userOptional);
         return buildProfileResponse(userOptional.get(), isFollowing);
     }
 
     @Override
     public Map<String, ProfileDTOResponse> followUser(String username) throws CustomNotFoundException {
         User userLoggedIn = getUserLoggedIn();
-
         Optional<User> userOptional = userRepository.findByUsername(username);
         if(userOptional.isEmpty()){
             throw new CustomNotFoundException(CustomError.builder().code("404").message("User not found").build());
         }
         User user = userOptional.get();
-        Set<User> followers = user.getFollowers();
-        boolean isFollowing = false;
-        for(User u: followers){
-            if(u.getId() == userLoggedIn.getId()){
-                isFollowing = true;
-                break;
-            }
-        }
+        boolean isFollowing = checkFollowing(userOptional);
         if(!isFollowing){
-            isFollowing = true;
             user.getFollowers().add(userLoggedIn);
             user = userRepository.save(user);
             isFollowing = true;
         }
-        return buildProfileResponse(userOptional.get(), isFollowing);
+        return buildProfileResponse(user, isFollowing);
     }
 
     @Override
@@ -126,23 +107,16 @@ public class UserServiceImpl implements UserService {
             throw new CustomNotFoundException(CustomError.builder().code("404").message("User not found").build());
         }
         User user = userOptional.get();
-        Set<User> followers = user.getFollowers();
-        boolean isFollowing = false;
-        for(User u: followers){
-            if(u.getId() == userLoggedIn.getId()){
-                isFollowing = true;
-                break;
-            }
-        }
+        boolean isFollowing = checkFollowing(userOptional);
         if(isFollowing){
-            isFollowing = true;
             user.getFollowers().remove(userLoggedIn);
             user = userRepository.save(user);
             isFollowing = false;
         }
-        return buildProfileResponse(userOptional.get(), isFollowing);
+        return buildProfileResponse(user, isFollowing);
     }
 
+    @Override
     public User getUserLoggedIn(){
         Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         if(principal instanceof UserDetails){
@@ -151,6 +125,18 @@ public class UserServiceImpl implements UserService {
             return user;
         }
         return null;
+    }
+
+    @Override
+    public Map<String, UserDTOResponse> updateCurrentUser(Map<String, UserDTOUpdate> userDTOUpdateMap) throws CustomNotFoundException {
+        User user = getUserLoggedIn();
+        UserDTOUpdate userDTOUpdate = userDTOUpdateMap.get("user");
+        if(user != null){
+            UserMapper.toUser(user, userDTOUpdate);
+            user = userRepository.save(user);
+            return buildDTOResponse(user);
+        }
+        throw new CustomNotFoundException(CustomError.builder().code("404").message("User not found").build());
     }
 
     private Map<String, ProfileDTOResponse> buildProfileResponse(User user, boolean isFollowing) {
@@ -169,6 +155,18 @@ public class UserServiceImpl implements UserService {
         userDTOResponse.setToken(jwtTokenUtil.generateToken(user, 24 * 60 * 60));
         wrapper.put("user", userDTOResponse);
         return wrapper;
+    }
+
+    private boolean checkFollowing(Optional<User> userOptional){
+        User userLoggedIn = getUserLoggedIn();
+        User user = userOptional.get();
+        Set<User> followers = user.getFollowers();
+        for(User u: followers){
+            if(u.getId() == userLoggedIn.getId()){
+                return true;
+            }
+        }
+        return false;
     }
 
 }

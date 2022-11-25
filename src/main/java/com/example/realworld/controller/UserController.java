@@ -5,6 +5,7 @@ import com.example.realworld.exception.custom.CustomNotFoundException;
 import com.example.realworld.model.user.dto.UserDTOCreate;
 import com.example.realworld.model.user.dto.UserDTOLoginRequest;
 import com.example.realworld.model.user.dto.UserDTOResponse;
+import com.example.realworld.model.user.dto.UserDTOUpdate;
 import com.example.realworld.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -26,13 +27,16 @@ public class UserController {
     }
 
     @PostMapping("/users")
-    public Map<String, UserDTOResponse> registerUser(
-            @RequestBody Map<String, UserDTOCreate> userDTOCreateMap) {
+    public Map<String, UserDTOResponse> registerUser(@RequestBody Map<String, UserDTOCreate> userDTOCreateMap) {
         return userService.registerUser(userDTOCreateMap);
     }
 
     @GetMapping("/user")
     public Map<String, UserDTOResponse> getCurrentUser() throws CustomNotFoundException {
         return  userService.getCurrentUser();
+    }
+    @PutMapping("/user")
+    public Map<String, UserDTOResponse> updateUser(@RequestBody Map<String, UserDTOUpdate> userDTOUpdateMap) throws CustomNotFoundException {
+        return userService.updateCurrentUser(userDTOUpdateMap);
     }
 }

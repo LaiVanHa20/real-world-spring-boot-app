@@ -3,6 +3,7 @@ package com.example.realworld.entity;
 import lombok.*;
 
 import javax.persistence.*;
+import java.util.List;
 import java.util.Set;
 
 @Entity
@@ -32,4 +33,16 @@ public class User {
 
     @ManyToMany(mappedBy = "followers")// dang follow ai
     private Set<User> followings;
+
+
+    @ManyToMany(cascade = CascadeType.ALL)
+    @JoinTable(name = "user_favorite_article", joinColumns = @JoinColumn(name = "user_id"), inverseJoinColumns = @JoinColumn(name = "article_id"))
+    private Set<Article> articleFavorited;
+
+    @OneToMany(mappedBy = "author")
+    private List<Article> articles;
+
+    //Comment
+    @OneToMany(mappedBy = "author")
+    private List<Comment> comments;
 }
